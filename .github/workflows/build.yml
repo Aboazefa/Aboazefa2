@@ -652,7 +652,7 @@ jobs:
                   roomsListContainer.removeAllViews();
                   LinearLayout quickJoinBar = new LinearLayout(this);
                   quickJoinBar.setOrientation(LinearLayout.HORIZONTAL);
-                  quickJoinBar.setGravity(Gravity.CENTER_VERTICAL);
+                  quickJoinBar.setGravity(android.view.Gravity.CENTER_VERTICAL);
                   quickJoinBar.setPadding(20, 14, 20, 14);
                   quickJoinBar.setBackgroundColor(Color.parseColor("#F5F7FA"));
 
