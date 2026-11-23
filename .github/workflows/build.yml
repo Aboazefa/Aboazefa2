@@ -30,7 +30,7 @@ jobs:
           yes | sdkmanager --sdk_root="$ANDROID_HOME" --licenses > /dev/null || true
           sdkmanager --sdk_root="$ANDROID_HOME" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
-      - name: Create Full Android Project
+      - name: Create Voice And Text Chat Android Project
         run: |
           mkdir -p gradle/wrapper
           cat << 'EOF' > gradle/wrapper/gradle-wrapper.properties
@@ -463,4 +463,328 @@ jobs:
               private LinearLayout infoTabLayout;
               private LinearLayout roomLiveLayout;
               private LinearLayout chatSectionLayout;
-              private LinearLay
+              private LinearLayout activeCallBanner;
+              private LinearLayout roomsListContainer;
+              private ScrollView chatScrollView;
+              private TextView tvHeaderTitle;
+              private TextView tvBannerRoom;
+              private TextView tvChatMessages;
+              private EditText etChatInput;
+              private Button btnNavRooms;
+              private Button btnNavInfo;
+              private WebView webViewVoice;
+
+              private final List<String> roomsList = new ArrayList<>();
+              private boolean isInCall = false;
+              private boolean isChatVisible = true;
+              private String currentRoomCode = "";
+
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  setContentView(R.layout.activity_main);
+
+                  roomsTabLayout = findViewById(R.id.roomsTabLayout);
+                  infoTabLayout = findViewById(R.id.infoTabLayout);
+                  roomLiveLayout = findViewById(R.id.roomLiveLayout);
+                  chatSectionLayout = findViewById(R.id.chatSectionLayout);
+                  activeCallBanner = findViewById(R.id.activeCallBanner);
+                  roomsListContainer = findViewById(R.id.roomsListContainer);
+                  chatScrollView = findViewById(R.id.chatScrollView);
+                  tvHeaderTitle = findViewById(R.id.tvHeaderTitle);
+                  tvBannerRoom = findViewById(R.id.tvBannerRoom);
+                  tvChatMessages = findViewById(R.id.tvChatMessages);
+                  etChatInput = findViewById(R.id.etChatInput);
+                  btnNavRooms = findViewById(R.id.btnNavRooms);
+                  btnNavInfo = findViewById(R.id.btnNavInfo);
+                  webViewVoice = findViewById(R.id.webViewVoice);
+
+                  Button btnTopAdd = findViewById(R.id.btnTopAdd);
+                  Button btnNavAdd = findViewById(R.id.btnNavAdd);
+                  Button btnBannerLeave = findViewById(R.id.btnBannerLeave);
+                  Button btnToggleChat = findViewById(R.id.btnToggleChat);
+                  Button btnSendChat = findViewById(R.id.btnSendChat);
+
+                  requestMicPermission();
+                  setupWebView();
+                  loadSavedRooms();
+                  renderRoomsCards();
+                  showRoomsTab();
+
+                  btnTopAdd.setOnClickListener(v -> showAddRoomDialog());
+                  btnNavAdd.setOnClickListener(v -> showAddRoomDialog());
+                  btnNavRooms.setOnClickListener(v -> {
+                      if (!isInCall) {
+                          showRoomsTab();
+                      }
+                  });
+                  btnNavInfo.setOnClickListener(v -> {
+                      if (!isInCall) {
+                          showInfoTab();
+                      }
+                  });
+                  btnBannerLeave.setOnClickListener(v -> leaveLiveRoom());
+
+                  btnToggleChat.setOnClickListener(v -> {
+                      isChatVisible = !isChatVisible;
+                      chatSectionLayout.setVisibility(isChatVisible ? View.VISIBLE : View.GONE);
+                      btnToggleChat.setText(isChatVisible ? "إخفاء الكتابة" : "الكتابة");
+                  });
+
+                  btnSendChat.setOnClickListener(v -> sendChatMessage());
+              }
+
+              private void sendChatMessage() {
+                  String msg = etChatInput.getText().toString().trim();
+                  if (msg.isEmpty()) {
+                      return;
+                  }
+                  appendChatLine("أنا: " + msg);
+                  etChatInput.setText("");
+
+                  if (webViewVoice != null && !currentRoomCode.isEmpty()) {
+                      String escaped = msg.replace("\\", "\\\\").replace("'", "\\'");
+                      String js = "(function() {"
+                              + "var inputs = document.querySelectorAll('input[type=\"text\"], textarea');"
+                              + "for (var i = 0; i < inputs.length; i++) {"
+                              + "  var el = inputs[i];"
+                              + "  if (el.offsetParent !== null) {"
+                              + "    el.focus();"
+                              + "    el.value = '" + escaped + "';"
+                              + "    el.dispatchEvent(new Event('input', { bubbles: true }));"
+                              + "    var ev = new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true });"
+                              + "    el.dispatchEvent(ev);"
+                              + "    break;"
+                              + "  }"
+                              + "}"
+                              + "})();";
+                      webViewVoice.evaluateJavascript(js, null);
+                  }
+              }
+
+              private void appendChatLine(String line) {
+                  String currentText = tvChatMessages.getText().toString();
+                  if (currentText.startsWith("مرحباً بك في الدردشة الكتابية")) {
+                      tvChatMessages.setText(line);
+                  } else {
+                      tvChatMessages.setText(currentText + "\n" + line);
+                  }
+                  chatScrollView.post(() -> chatScrollView.fullScroll(View.FOCUS_DOWN));
+              }
+
+              private void showRoomsTab() {
+                  roomLiveLayout.setVisibility(View.GONE);
+                  infoTabLayout.setVisibility(View.GONE);
+                  roomsTabLayout.setVisibility(View.VISIBLE);
+                  tvHeaderTitle.setText("Friends Voice");
+                  btnNavRooms.setTextColor(Color.parseColor("#2B6CB0"));
+                  btnNavInfo.setTextColor(Color.parseColor("#2D3748"));
+              }
+
+              private void showInfoTab() {
+                  roomLiveLayout.setVisibility(View.GONE);
+                  roomsTabLayout.setVisibility(View.GONE);
+                  infoTabLayout.setVisibility(View.VISIBLE);
+                  tvHeaderTitle.setText("الإرشادات");
+                  btnNavInfo.setTextColor(Color.parseColor("#2B6CB0"));
+                  btnNavRooms.setTextColor(Color.parseColor("#2D3748"));
+              }
+
+              private void showAddRoomDialog() {
+                  AlertDialog.Builder builder = new AlertDialog.Builder(this);
+                  builder.setTitle("إضافة غرفة أو مجموعة جديدة");
+                  builder.setMessage("اكتب اسم الغرفة (حروف إنجليزية أو أرقام بدون مسافات):");
+
+                  final EditText input = new EditText(this);
+                  input.setHint("مثال: friends-city أو work-team");
+                  input.setPadding(40, 24, 40, 24);
+                  builder.setView(input);
+
+                  builder.setPositiveButton("إضافة", (dialog, which) -> {
+                      String cleanCode = input.getText().toString().trim().replaceAll("[^a-zA-Z0-9_-]", "");
+                      if (cleanCode.isEmpty()) {
+                          Toast.makeText(this, "يرجى كتابة اسم صالح للغرفة", Toast.LENGTH_SHORT).show();
+                          return;
+                      }
+                      if (!roomsList.contains(cleanCode)) {
+                          roomsList.add(cleanCode);
+                          saveRooms();
+                          renderRoomsCards();
+                          showRoomsTab();
+                          Toast.makeText(this, "تمت إضافة الغرفة: " + cleanCode, Toast.LENGTH_SHORT).show();
+                      } else {
+                          Toast.makeText(this, "هذه الغرفة موجودة بالفعل", Toast.LENGTH_SHORT).show();
+                      }
+                  });
+
+                  builder.setNegativeButton("إلغاء", null);
+                  builder.show();
+              }
+
+              private void showDeleteRoomDialog(String roomCode) {
+                  new AlertDialog.Builder(this)
+                          .setTitle("حذف الغرفة")
+                          .setMessage("هل تريد حذف الغرفة (" + roomCode + ")؟")
+                          .setPositiveButton("حذف", (dialog, which) -> {
+                              roomsList.remove(roomCode);
+                              saveRooms();
+                              renderRoomsCards();
+                          })
+                          .setNegativeButton("إلغاء", null)
+                          .show();
+              }
+
+              private void loadSavedRooms() {
+                  SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+                  Set<String> savedSet = prefs.getStringSet(KEY_ROOMS, null);
+                  roomsList.clear();
+                  if (savedSet != null) {
+                      roomsList.addAll(savedSet);
+                  }
+              }
+
+              private void saveRooms() {
+                  SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+                  prefs.edit().putStringSet(KEY_ROOMS, new LinkedHashSet<>(roomsList)).apply();
+              }
+
+              private void renderRoomsCards() {
+                  roomsListContainer.removeAllViews();
+
+                  if (roomsList.isEmpty()) {
+                      TextView emptyText = new TextView(this);
+                      emptyText.setText("لا توجد غرف بعد.\nاضغط على (+ غرفة) في الأعلى لإضافة غرفتك الأولى.");
+                      emptyText.setTextColor(Color.parseColor("#4A5568"));
+                      emptyText.setTextSize(15sp);
+                      emptyText.setGravity(View.TEXT_ALIGNMENT_CENTER);
+                      emptyText.setPadding(24, 60, 24, 24);
+                      roomsListContainer.addView(emptyText);
+                      return;
+                  }
+
+                  for (String room : roomsList) {
+                      LinearLayout row = new LinearLayout(this);
+                      row.setOrientation(LinearLayout.HORIZONTAL);
+                      row.setGravity(View.TEXT_ALIGNMENT_GRAVITY);
+                      row.setBackgroundColor(Color.WHITE);
+                      row.setPadding(28, 24, 28, 24);
+
+                      LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
+                              LinearLayout.LayoutParams.MATCH_PARENT,
+                              LinearLayout.LayoutParams.WRAP_CONTENT
+                      );
+                      rowParams.setMargins(0, 0, 0, 18);
+                      row.setLayoutParams(rowParams);
+
+                      TextView badge = new TextView(this);
+                      String initials = room.length() >= 2 ? room.substring(0, 2).toUpperCase() : room.toUpperCase();
+                      badge.setText(initials);
+                      badge.setTextColor(Color.WHITE);
+                      badge.setTextSize(16sp);
+                      badge.setBackgroundColor(Color.parseColor("#3182CE"));
+                      badge.setPadding(28, 22, 28, 22);
+
+                      TextView roomTitle = new TextView(this);
+                      roomTitle.setText("  " + room);
+                      roomTitle.setTextColor(Color.parseColor("#1A202C"));
+                      roomTitle.setTextSize(17sp);
+                      roomTitle.setPadding(24, 16, 12, 16);
+
+                      row.addView(badge);
+                      row.addView(roomTitle);
+
+                      row.setOnClickListener(v -> tryJoinGroup(room));
+                      row.setOnLongClickListener(v -> {
+                          showDeleteRoomDialog(room);
+                          return true;
+                      });
+
+                      roomsListContainer.addView(row);
+                  }
+              }
+
+              private void tryJoinGroup(String roomCode) {
+                  if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                          != PackageManager.PERMISSION_GRANTED) {
+                      requestMicPermission();
+                      Toast.makeText(this, "يرجى السماح بصلاحية الميكروفون أولاً", Toast.LENGTH_SHORT).show();
+                      return;
+                  }
+                  joinLiveRoom(roomCode);
+              }
+
+              private void requestMicPermission() {
+                  if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                          != PackageManager.PERMISSION_GRANTED) {
+                      ActivityCompat.requestPermissions(this,
+                              new String[]{Manifest.permission.RECORD_AUDIO, Manifest.permission.MODIFY_AUDIO_SETTINGS}, 101);
+                  }
+              }
+
+              private void setupWebView() {
+                  WebSettings settings = webViewVoice.getSettings();
+                  settings.setJavaScriptEnabled(true);
+                  settings.setDomStorageEnabled(true);
+                  settings.setMediaPlaybackRequiresUserGesture(false);
+                  settings.setUserAgentString("Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36");
+
+                  webViewVoice.setWebViewClient(new WebViewClient());
+                  webViewVoice.setWebChromeClient(new WebChromeClient() {
+                      @Override
+                      public void onPermissionRequest(final PermissionRequest request) {
+                          runOnUiThread(() -> request.grant(request.getResources()));
+                      }
+                  });
+              }
+
+              private void joinLiveRoom(String roomCode) {
+                  AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+                  if (audioManager != null) {
+                      audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+                      audioManager.setSpeakerphoneOn(true);
+                  }
+                  currentRoomCode = roomCode;
+                  isInCall = true;
+                  isChatVisible = true;
+                  chatSectionLayout.setVisibility(View.VISIBLE);
+                  tvChatMessages.setText("مرحباً بك في الدردشة الكتابية للغرفة: " + roomCode);
+
+                  roomsTabLayout.setVisibility(View.GONE);
+                  infoTabLayout.setVisibility(View.GONE);
+                  roomLiveLayout.setVisibility(View.VISIBLE);
+                  activeCallBanner.setVisibility(View.VISIBLE);
+                  tvBannerRoom.setText("صوت وكتابة في الغرفة: " + roomCode);
+                  tvHeaderTitle.setText(roomCode);
+
+                  String url = "https://meet.jit.si/FriendsVoice_" + roomCode
+                          + "#config.startWithAudioMuted=false&config.startWithVideoMuted=true&config.prejoinPageEnabled=false&interfaceConfig.DISABLE_JOIN_LEAVE_NOTIFICATIONS=true";
+                  webViewVoice.loadUrl(url);
+              }
+
+              private void leaveLiveRoom() {
+                  isInCall = false;
+                  currentRoomCode = "";
+                  webViewVoice.loadUrl("about:blank");
+                  activeCallBanner.setVisibility(View.GONE);
+                  showRoomsTab();
+              }
+
+              @Override
+              protected void onDestroy() {
+                  if (webViewVoice != null) {
+                      webViewVoice.destroy();
+                  }
+                  super.onDestroy();
+              }
+          }
+          EOF
+
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Upload APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: friends-voice-apk
+          path: app/build/outputs/apk/debug/*.apk
