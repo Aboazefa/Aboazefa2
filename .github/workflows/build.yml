@@ -30,7 +30,7 @@ jobs:
           yes | sdkmanager --sdk_root="$ANDROID_HOME" --licenses > /dev/null || true
           sdkmanager --sdk_root="$ANDROID_HOME" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
-      - name: Create Modern Android Project
+      - name: Create Live Voice Android Project
         run: |
           mkdir -p gradle/wrapper
           cat << 'EOF' > gradle/wrapper/gradle-wrapper.properties
@@ -91,8 +91,8 @@ jobs:
                   applicationId "com.example.friendsvoice"
                   minSdk 24
                   targetSdk 34
-                  versionCode 1
-                  versionName "1.0"
+                  versionCode 2
+                  versionName "2.0"
               }
 
               buildTypes {
@@ -118,15 +118,18 @@ jobs:
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
               <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
               <uses-permission android:name="android.permission.RECORD_AUDIO" />
               <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 
               <application
                   android:allowBackup="true"
                   android:label="Friends Voice"
+                  android:usesCleartextTraffic="true"
                   android:theme="@style/Theme.Material3.DayNight.NoActionBar">
                   <activity
                       android:name=".MainActivity"
+                      android:configChanges="orientation|screenSize|keyboardHidden"
                       android:exported="true">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
@@ -148,32 +151,69 @@ jobs:
           <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
               android:layout_width="match_parent"
               android:layout_height="match_parent"
-              android:gravity="center"
               android:orientation="vertical"
-              android:padding="24dp">
+              android:padding="16dp">
 
-              <TextView
-                  android:id="@+id/tvStatus"
-                  android:layout_width="wrap_content"
-                  android:layout_height="wrap_content"
-                  android:text="Friends Voice Ready"
-                  android:textSize="22sp"
-                  android:textStyle="bold" />
-
-              <EditText
-                  android:id="@+id/etRoomCode"
+              <LinearLayout
+                  android:id="@+id/lobbyLayout"
                   android:layout_width="match_parent"
-                  android:layout_height="wrap_content"
-                  android:layout_marginTop="20dp"
-                  android:hint="Room Name (e.g. city-chat)"
-                  android:inputType="text" />
+                  android:layout_height="match_parent"
+                  android:gravity="center"
+                  android:orientation="vertical"
+                  android:padding="12dp">
 
-              <Button
-                  android:id="@+id/btnAction"
+                  <TextView
+                      android:id="@+id/tvStatus"
+                      android:layout_width="wrap_content"
+                      android:layout_height="wrap_content"
+                      android:text="Friends Voice Live"
+                      android:textSize="24sp"
+                      android:textStyle="bold" />
+
+                  <TextView
+                      android:layout_width="wrap_content"
+                      android:layout_height="wrap_content"
+                      android:layout_marginTop="8dp"
+                      android:text="أدخل نفس اسم الغرفة مع أصدقائك للتحدث فوراً"
+                      android:textSize="14sp" />
+
+                  <EditText
+                      android:id="@+id/etRoomCode"
+                      android:layout_width="match_parent"
+                      android:layout_height="wrap_content"
+                      android:layout_marginTop="24dp"
+                      android:hint="Room Name (e.g. aboazefa)"
+                      android:inputType="text"
+                      android:text="aboazefa" />
+
+                  <Button
+                      android:id="@+id/btnJoin"
+                      android:layout_width="match_parent"
+                      android:layout_height="wrap_content"
+                      android:layout_marginTop="16dp"
+                      android:text="Join Live Voice Room" />
+              </LinearLayout>
+
+              <LinearLayout
+                  android:id="@+id/roomLayout"
                   android:layout_width="match_parent"
-                  android:layout_height="wrap_content"
-                  android:layout_marginTop="16dp"
-                  android:text="Join Room" />
+                  android:layout_height="match_parent"
+                  android:orientation="vertical"
+                  android:visibility="gone">
+
+                  <WebView
+                      android:id="@+id/webViewVoice"
+                      android:layout_width="match_parent"
+                      android:layout_height="0dp"
+                      android:layout_weight="1" />
+
+                  <Button
+                      android:id="@+id/btnLeave"
+                      android:layout_width="match_parent"
+                      android:layout_height="wrap_content"
+                      android:layout_marginTop="8dp"
+                      android:text="Leave Room" />
+              </LinearLayout>
           </LinearLayout>
           EOF
 
@@ -181,11 +221,19 @@ jobs:
           package com.example.friendsvoice;
 
           import android.Manifest;
+          import android.content.Context;
           import android.content.pm.PackageManager;
+          import android.media.AudioManager;
           import android.os.Bundle;
+          import android.view.View;
+          import android.webkit.PermissionRequest;
+          import android.webkit.WebChromeClient;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
           import android.widget.Button;
           import android.widget.EditText;
-          import android.widget.TextView;
+          import android.widget.LinearLayout;
           import android.widget.Toast;
 
           import androidx.appcompat.app.AppCompatActivity;
@@ -194,38 +242,93 @@ jobs:
 
           public class MainActivity extends AppCompatActivity {
 
-              private boolean isJoined = false;
+              private LinearLayout lobbyLayout;
+              private LinearLayout roomLayout;
+              private EditText etRoomCode;
+              private WebView webViewVoice;
 
               @Override
               protected void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
                   setContentView(R.layout.activity_main);
 
-                  TextView tvStatus = findViewById(R.id.tvStatus);
-                  EditText etRoomCode = findViewById(R.id.etRoomCode);
-                  Button btnAction = findViewById(R.id.btnAction);
+                  lobbyLayout = findViewById(R.id.lobbyLayout);
+                  roomLayout = findViewById(R.id.roomLayout);
+                  etRoomCode = findViewById(R.id.etRoomCode);
+                  webViewVoice = findViewById(R.id.webViewVoice);
+                  Button btnJoin = findViewById(R.id.btnJoin);
+                  Button btnLeave = findViewById(R.id.btnLeave);
 
+                  requestMicPermission();
+                  setupWebView();
+
+                  btnJoin.setOnClickListener(v -> {
+                      String room = etRoomCode.getText().toString().trim().replaceAll("[^a-zA-Z0-9_-]", "");
+                      if (room.isEmpty()) {
+                          Toast.makeText(this, "Please enter a valid room name", Toast.LENGTH_SHORT).show();
+                          return;
+                      }
+                      if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                              != PackageManager.PERMISSION_GRANTED) {
+                          requestMicPermission();
+                          Toast.makeText(this, "Allow Microphone permission first", Toast.LENGTH_SHORT).show();
+                          return;
+                      }
+                      joinLiveRoom(room);
+                  });
+
+                  btnLeave.setOnClickListener(v -> leaveLiveRoom());
+              }
+
+              private void requestMicPermission() {
                   if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
                           != PackageManager.PERMISSION_GRANTED) {
                       ActivityCompat.requestPermissions(this,
-                              new String[]{Manifest.permission.RECORD_AUDIO}, 101);
+                              new String[]{Manifest.permission.RECORD_AUDIO, Manifest.permission.MODIFY_AUDIO_SETTINGS}, 101);
                   }
+              }
 
-                  btnAction.setOnClickListener(v -> {
-                      String room = etRoomCode.getText().toString().trim();
-                      if (room.isEmpty()) {
-                          Toast.makeText(this, "Please enter a room name", Toast.LENGTH_SHORT).show();
-                          return;
-                      }
-                      isJoined = !isJoined;
-                      if (isJoined) {
-                          tvStatus.setText("In Room: " + room);
-                          btnAction.setText("Leave Room");
-                      } else {
-                          tvStatus.setText("Friends Voice Ready");
-                          btnAction.setText("Join Room");
+              private void setupWebView() {
+                  WebSettings settings = webViewVoice.getSettings();
+                  settings.setJavaScriptEnabled(true);
+                  settings.setDomStorageEnabled(true);
+                  settings.setMediaPlaybackRequiresUserGesture(false);
+                  settings.setUserAgentString("Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36");
+
+                  webViewVoice.setWebViewClient(new WebViewClient());
+                  webViewVoice.setWebChromeClient(new WebChromeClient() {
+                      @Override
+                      public void onPermissionRequest(final PermissionRequest request) {
+                          runOnUiThread(() -> request.grant(request.getResources()));
                       }
                   });
+              }
+
+              private void joinLiveRoom(String room) {
+                  AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+                  if (audioManager != null) {
+                      audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+                      audioManager.setSpeakerphoneOn(true);
+                  }
+                  lobbyLayout.setVisibility(View.GONE);
+                  roomLayout.setVisibility(View.VISIBLE);
+                  String url = "https://meet.jit.si/FriendsVoice_" + room
+                          + "#config.startWithAudioMuted=false&config.startWithVideoMuted=true&config.prejoinPageEnabled=false&interfaceConfig.DISABLE_JOIN_LEAVE_NOTIFICATIONS=true";
+                  webViewVoice.loadUrl(url);
+              }
+
+              private void leaveLiveRoom() {
+                  webViewVoice.loadUrl("about:blank");
+                  roomLayout.setVisibility(View.GONE);
+                  lobbyLayout.setVisibility(View.VISIBLE);
+              }
+
+              @Override
+              protected void onDestroy() {
+                  if (webViewVoice != null) {
+                      webViewVoice.destroy();
+                  }
+                  super.onDestroy();
               }
           }
           EOF
