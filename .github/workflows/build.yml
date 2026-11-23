@@ -1,4 +1,4 @@
-name: Build Friends Voice APK
+name: Build Friends Voice APk
 
 on:
   workflow_dispatch:
