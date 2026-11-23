@@ -8,6 +8,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -18,8 +21,14 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Install Android SDK Packages
+        run: |
+          export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/cmdline-tools/11.0/bin:$ANDROID_HOME/platform-tools:$PATH"
+          if [ ! -d "$ANDROID_HOME/cmdline-tools/latest" ] && [ -d "$ANDROID_HOME/cmdline-tools/11.0" ]; then
+            ln -s "$ANDROID_HOME/cmdline-tools/11.0" "$ANDROID_HOME/cmdline-tools/latest"
+          fi
+          yes | sdkmanager --sdk_root="$ANDROID_HOME" --licenses > /dev/null || true
+          sdkmanager --sdk_root="$ANDROID_HOME" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
       - name: Create Modern Android Project
         run: |
