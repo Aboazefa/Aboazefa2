@@ -650,39 +650,39 @@ jobs:
 
               private void renderRoomsCards() {
                   roomsListContainer.removeAllViews();
-LinearLayout quickJoinBar = new LinearLayout(this);
-quickJoinBar.setOrientation(LinearLayout.HORIZONTAL);
-quickJoinBar.setGravity(Gravity.CENTER_VERTICAL);
-quickJoinBar.setPadding(20, 14, 20, 14);
-quickJoinBar.setBackgroundColor(Color.parseColor("#F5F7FA"));
+                  LinearLayout quickJoinBar = new LinearLayout(this);
+                  quickJoinBar.setOrientation(LinearLayout.HORIZONTAL);
+                  quickJoinBar.setGravity(Gravity.CENTER_VERTICAL);
+                  quickJoinBar.setPadding(20, 14, 20, 14);
+                  quickJoinBar.setBackgroundColor(Color.parseColor("#F5F7FA"));
 
-final EditText etQuickJoin = new EditText(this);
-etQuickJoin.setHint("اكتب اسم الغرفة للدخول...");
-etQuickJoin.setSingleLine(true);
-etQuickJoin.setTextSize(14f);
-etQuickJoin.setPadding(20, 14, 20, 14);
-LinearLayout.LayoutParams etParams = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-etParams.setMargins(0, 0, 14, 0);
-etQuickJoin.setLayoutParams(etParams);
+                  final EditText etQuickJoin = new EditText(this);
+                  etQuickJoin.setHint("اكتب اسم الغرفة للدخول...");
+                  etQuickJoin.setSingleLine(true);
+                  etQuickJoin.setTextSize(14f);
+                  etQuickJoin.setPadding(20, 14, 20, 14);
+                  LinearLayout.LayoutParams etParams = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+                  etParams.setMargins(0, 0, 14, 0);
+                  etQuickJoin.setLayoutParams(etParams);
 
-Button btnQuickJoin = new Button(this);
-btnQuickJoin.setText("دخول");
-btnQuickJoin.setTextColor(Color.WHITE);
-btnQuickJoin.setBackgroundColor(Color.parseColor("#1976D2"));
+                  Button btnQuickJoin = new Button(this);
+                  btnQuickJoin.setText("دخول");
+                  btnQuickJoin.setTextColor(Color.WHITE);
+                  btnQuickJoin.setBackgroundColor(Color.parseColor("#1976D2"));
 
-btnQuickJoin.setOnClickListener(v -> {
-    String raw = etQuickJoin.getText() != null ? etQuickJoin.getText().toString().trim() : "";
-    String cleanCode = raw.replaceAll("[^a-zA-Z0-9_-]", "");
-    if (cleanCode.isEmpty()) {
-        Toast.makeText(this, "أدخل اسم غرفة صحيحاً", Toast.LENGTH_SHORT).show();
-        return;
-    }
-    tryJoinGroup(cleanCode);
-});
+                  btnQuickJoin.setOnClickListener(v -> {
+                  String raw = etQuickJoin.getText() != null ? etQuickJoin.getText().toString().trim() : "";
+                  String cleanCode = raw.replaceAll("[^a-zA-Z0-9_-]", "");
+                  if (cleanCode.isEmpty()) {
+                  Toast.makeText(this, "أدخل اسم غرفة صحيحاً", Toast.LENGTH_SHORT).show();
+                  return;
+                  }
+                  tryJoinGroup(cleanCode);
+                  });
 
-quickJoinBar.addView(etQuickJoin);
-quickJoinBar.addView(btnQuickJoin);
-roomsListContainer.addView(quickJoinBar);
+                  quickJoinBar.addView(etQuickJoin);
+                  quickJoinBar.addView(btnQuickJoin);
+                  roomsListContainer.addView(quickJoinBar);
 
                   if (roomsList.isEmpty()) {
                       TextView emptyText = new TextView(this);
