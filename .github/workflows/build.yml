@@ -30,7 +30,7 @@ jobs:
           yes | sdkmanager --sdk_root="$ANDROID_HOME" --licenses > /dev/null || true
           sdkmanager --sdk_root="$ANDROID_HOME" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
-      - name: Create Voice And Text Chat Android Project
+      - name: Create Full Android Project
         run: |
           mkdir -p gradle/wrapper
           cat << 'EOF' > gradle/wrapper/gradle-wrapper.properties
@@ -463,4 +463,4 @@ jobs:
               private LinearLayout infoTabLayout;
               private LinearLayout roomLiveLayout;
               private LinearLayout chatSectionLayout;
-              pr
+              private LinearLay
