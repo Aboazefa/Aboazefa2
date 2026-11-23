@@ -30,7 +30,7 @@ jobs:
           yes | sdkmanager --sdk_root="$ANDROID_HOME" --licenses > /dev/null || true
           sdkmanager --sdk_root="$ANDROID_HOME" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
-      - name: Create Live Voice Android Project
+      - name: Create Custom Rooms Android Project
         run: |
           mkdir -p gradle/wrapper
           cat << 'EOF' > gradle/wrapper/gradle-wrapper.properties
@@ -91,8 +91,8 @@ jobs:
                   applicationId "com.example.friendsvoice"
                   minSdk 24
                   targetSdk 34
-                  versionCode 2
-                  versionName "2.0"
+                  versionCode 4
+                  versionName "4.0"
               }
 
               buildTypes {
@@ -155,43 +155,49 @@ jobs:
               android:padding="16dp">
 
               <LinearLayout
-                  android:id="@+id/lobbyLayout"
+                  android:id="@+id/roomsScreen"
                   android:layout_width="match_parent"
                   android:layout_height="match_parent"
-                  android:gravity="center"
-                  android:orientation="vertical"
-                  android:padding="12dp">
+                  android:orientation="vertical">
 
                   <TextView
-                      android:id="@+id/tvStatus"
-                      android:layout_width="wrap_content"
+                      android:layout_width="match_parent"
                       android:layout_height="wrap_content"
-                      android:text="Friends Voice Live"
+                      android:gravity="center"
+                      android:paddingTop="12dp"
+                      android:text="الغرف والمجموعات"
                       android:textSize="24sp"
                       android:textStyle="bold" />
 
                   <TextView
-                      android:layout_width="wrap_content"
-                      android:layout_height="wrap_content"
-                      android:layout_marginTop="8dp"
-                      android:text="أدخل نفس اسم الغرفة مع أصدقائك للتحدث فوراً"
-                      android:textSize="14sp" />
-
-                  <EditText
-                      android:id="@+id/etRoomCode"
                       android:layout_width="match_parent"
                       android:layout_height="wrap_content"
-                      android:layout_marginTop="24dp"
-                      android:hint="Room Name (e.g. aboazefa)"
-                      android:inputType="text"
-                      android:text="aboazefa" />
+                      android:layout_marginTop="4dp"
+                      android:layout_marginBottom="16dp"
+                      android:gravity="center"
+                      android:text="اضغط على زر الإضافة لإنشاء غرفة جديدة، أو اضغط مطولاً على أي غرفة لحذفها"
+                      android:textSize="13sp" />
 
                   <Button
-                      android:id="@+id/btnJoin"
+                      android:id="@+id/btnAddRoom"
                       android:layout_width="match_parent"
-                      android:layout_height="wrap_content"
-                      android:layout_marginTop="16dp"
-                      android:text="Join Live Voice Room" />
+                      android:layout_height="56dp"
+                      android:layout_marginBottom="16dp"
+                      android:text="+ إضافة غرفة جديدة"
+                      android:textSize="16sp" />
+
+                  <ScrollView
+                      android:layout_width="match_parent"
+                      android:layout_height="0dp"
+                      android:layout_weight="1"
+                      android:fillViewport="true">
+
+                      <LinearLayout
+                          android:id="@+id/roomsListContainer"
+                          android:layout_width="match_parent"
+                          android:layout_height="wrap_content"
+                          android:orientation="vertical" />
+                  </ScrollView>
               </LinearLayout>
 
               <LinearLayout
@@ -200,6 +206,16 @@ jobs:
                   android:layout_height="match_parent"
                   android:orientation="vertical"
                   android:visibility="gone">
+
+                  <TextView
+                      android:id="@+id/tvActiveGroup"
+                      android:layout_width="match_parent"
+                      android:layout_height="wrap_content"
+                      android:gravity="center"
+                      android:padding="8dp"
+                      android:text="الغرفة النشطة"
+                      android:textSize="16sp"
+                      android:textStyle="bold" />
 
                   <WebView
                       android:id="@+id/webViewVoice"
@@ -212,7 +228,7 @@ jobs:
                       android:layout_width="match_parent"
                       android:layout_height="wrap_content"
                       android:layout_marginTop="8dp"
-                      android:text="Leave Room" />
+                      android:text="العودة إلى قائمة الغرف" />
               </LinearLayout>
           </LinearLayout>
           EOF
@@ -221,7 +237,9 @@ jobs:
           package com.example.friendsvoice;
 
           import android.Manifest;
+          import android.app.AlertDialog;
           import android.content.Context;
+          import android.content.SharedPreferences;
           import android.content.pm.PackageManager;
           import android.media.AudioManager;
           import android.os.Bundle;
@@ -234,50 +252,156 @@ jobs:
           import android.widget.Button;
           import android.widget.EditText;
           import android.widget.LinearLayout;
+          import android.widget.TextView;
           import android.widget.Toast;
 
           import androidx.appcompat.app.AppCompatActivity;
           import androidx.core.app.ActivityCompat;
           import androidx.core.content.ContextCompat;
 
+          import java.util.ArrayList;
+          import java.util.LinkedHashSet;
+          import java.util.List;
+          import java.util.Set;
+
           public class MainActivity extends AppCompatActivity {
 
-              private LinearLayout lobbyLayout;
+              private static final String PREFS_NAME = "FriendsVoicePrefs";
+              private static final String KEY_ROOMS = "saved_rooms";
+
+              private LinearLayout roomsScreen;
+              private LinearLayout roomsListContainer;
               private LinearLayout roomLayout;
-              private EditText etRoomCode;
+              private TextView tvActiveGroup;
               private WebView webViewVoice;
+
+              private final List<String> roomsList = new ArrayList<>();
 
               @Override
               protected void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
                   setContentView(R.layout.activity_main);
 
-                  lobbyLayout = findViewById(R.id.lobbyLayout);
+                  roomsScreen = findViewById(R.id.roomsScreen);
+                  roomsListContainer = findViewById(R.id.roomsListContainer);
                   roomLayout = findViewById(R.id.roomLayout);
-                  etRoomCode = findViewById(R.id.etRoomCode);
+                  tvActiveGroup = findViewById(R.id.tvActiveGroup);
                   webViewVoice = findViewById(R.id.webViewVoice);
-                  Button btnJoin = findViewById(R.id.btnJoin);
+
+                  Button btnAddRoom = findViewById(R.id.btnAddRoom);
                   Button btnLeave = findViewById(R.id.btnLeave);
 
                   requestMicPermission();
                   setupWebView();
+                  loadSavedRooms();
+                  renderRoomsButtons();
 
-                  btnJoin.setOnClickListener(v -> {
-                      String room = etRoomCode.getText().toString().trim().replaceAll("[^a-zA-Z0-9_-]", "");
-                      if (room.isEmpty()) {
-                          Toast.makeText(this, "Please enter a valid room name", Toast.LENGTH_SHORT).show();
+                  btnAddRoom.setOnClickListener(v -> showAddRoomDialog());
+                  btnLeave.setOnClickListener(v -> leaveLiveRoom());
+              }
+
+              private void showAddRoomDialog() {
+                  AlertDialog.Builder builder = new AlertDialog.Builder(this);
+                  builder.setTitle("إضافة غرفة جديدة");
+                  builder.setMessage("اكتب اسم الغرفة أو المجموعة (يفضل حروف إنجليزية وأرقام):");
+
+                  final EditText input = new EditText(this);
+                  input.setHint("مثال: team-room أو city1");
+                  input.setPadding(40, 24, 40, 24);
+                  builder.setView(input);
+
+                  builder.setPositiveButton("إضافة", (dialog, which) -> {
+                      String rawName = input.getText().toString().trim();
+                      String cleanCode = rawName.replaceAll("[^a-zA-Z0-9_-]", "");
+                      if (cleanCode.isEmpty()) {
+                          Toast.makeText(this, "يرجى إدخال اسم صالح للغرفة", Toast.LENGTH_SHORT).show();
                           return;
                       }
-                      if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
-                              != PackageManager.PERMISSION_GRANTED) {
-                          requestMicPermission();
-                          Toast.makeText(this, "Allow Microphone permission first", Toast.LENGTH_SHORT).show();
-                          return;
+                      if (!roomsList.contains(cleanCode)) {
+                          roomsList.add(cleanCode);
+                          saveRooms();
+                          renderRoomsButtons();
+                          Toast.makeText(this, "تمت إضافة الغرفة: " + cleanCode, Toast.LENGTH_SHORT).show();
+                      } else {
+                          Toast.makeText(this, "هذه الغرفة موجودة بالفعل", Toast.LENGTH_SHORT).show();
                       }
-                      joinLiveRoom(room);
                   });
 
-                  btnLeave.setOnClickListener(v -> leaveLiveRoom());
+                  builder.setNegativeButton("إلغاء", (dialog, which) -> dialog.cancel());
+                  builder.show();
+              }
+
+              private void showDeleteRoomDialog(String roomCode) {
+                  new AlertDialog.Builder(this)
+                          .setTitle("حذف الغرفة")
+                          .setMessage("هل تريد حذف الغرفة (" + roomCode + ") من القائمة؟")
+                          .setPositiveButton("حذف", (dialog, which) -> {
+                              roomsList.remove(roomCode);
+                              saveRooms();
+                              renderRoomsButtons();
+                              Toast.makeText(this, "تم حذف الغرفة", Toast.LENGTH_SHORT).show();
+                          })
+                          .setNegativeButton("إلغاء", null)
+                          .show();
+              }
+
+              private void loadSavedRooms() {
+                  SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+                  Set<String> savedSet = prefs.getStringSet(KEY_ROOMS, null);
+                  roomsList.clear();
+                  if (savedSet != null) {
+                      roomsList.addAll(savedSet);
+                  }
+              }
+
+              private void saveRooms() {
+                  SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+                  Set<String> setToSave = new LinkedHashSet<>(roomsList);
+                  prefs.edit().putStringSet(KEY_ROOMS, setToSave).apply();
+              }
+
+              private void renderRoomsButtons() {
+                  roomsListContainer.removeAllViews();
+
+                  if (roomsList.isEmpty()) {
+                      TextView emptyText = new TextView(this);
+                      emptyText.setText("لا توجد غرف مضافة بعد. اضغط على (+ إضافة غرفة جديدة) للبدء.");
+                      emptyText.setTextSize(15sp);
+                      emptyText.setGravity(View.TEXT_ALIGNMENT_CENTER);
+                      emptyText.setPadding(16, 40, 16, 16);
+                      roomsListContainer.addView(emptyText);
+                      return;
+                  }
+
+                  for (String room : roomsList) {
+                      Button roomBtn = new Button(this);
+                      roomBtn.setText("غرفة: " + room);
+                      roomBtn.setTextSize(16sp);
+                      LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                              LinearLayout.LayoutParams.MATCH_PARENT,
+                              150
+                      );
+                      params.setMargins(0, 0, 0, 24);
+                      roomBtn.setLayoutParams(params);
+
+                      roomBtn.setOnClickListener(v -> tryJoinGroup(room));
+                      roomBtn.setOnLongClickListener(v -> {
+                          showDeleteRoomDialog(room);
+                          return true;
+                      });
+
+                      roomsListContainer.addView(roomBtn);
+                  }
+              }
+
+              private void tryJoinGroup(String roomCode) {
+                  if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                          != PackageManager.PERMISSION_GRANTED) {
+                      requestMicPermission();
+                      Toast.makeText(this, "يرجى السماح بصلاحية الميكروفون أولاً", Toast.LENGTH_SHORT).show();
+                      return;
+                  }
+                  joinLiveRoom(roomCode);
               }
 
               private void requestMicPermission() {
@@ -304,15 +428,16 @@ jobs:
                   });
               }
 
-              private void joinLiveRoom(String room) {
+              private void joinLiveRoom(String roomCode) {
                   AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
                   if (audioManager != null) {
                       audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
                       audioManager.setSpeakerphoneOn(true);
                   }
-                  lobbyLayout.setVisibility(View.GONE);
+                  tvActiveGroup.setText("متصل الآن في الغرفة: " + roomCode);
+                  roomsScreen.setVisibility(View.GONE);
                   roomLayout.setVisibility(View.VISIBLE);
-                  String url = "https://meet.jit.si/FriendsVoice_" + room
+                  String url = "https://meet.jit.si/FriendsVoice_" + roomCode
                           + "#config.startWithAudioMuted=false&config.startWithVideoMuted=true&config.prejoinPageEnabled=false&interfaceConfig.DISABLE_JOIN_LEAVE_NOTIFICATIONS=true";
                   webViewVoice.loadUrl(url);
               }
@@ -320,7 +445,7 @@ jobs:
               private void leaveLiveRoom() {
                   webViewVoice.loadUrl("about:blank");
                   roomLayout.setVisibility(View.GONE);
-                  lobbyLayout.setVisibility(View.VISIBLE);
+                  roomsScreen.setVisibility(View.VISIBLE);
               }
 
               @Override
