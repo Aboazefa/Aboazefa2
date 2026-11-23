@@ -46,6 +46,11 @@ jobs:
           curl -sSL https://raw.githubusercontent.com/gradle/gradle/v8.9.0/gradlew.bat -o gradlew.bat
           chmod +x gradlew
 
+          cat << 'EOF' > gradle.properties
+          android.useAndroidX=true
+          org.gradle.jvmargs=-Xmx2048m
+          EOF
+
           cat << 'EOF' > settings.gradle
           pluginManagement {
               repositories {
