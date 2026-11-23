@@ -655,7 +655,7 @@ jobs:
                       TextView emptyText = new TextView(this);
                       emptyText.setText("لا توجد غرف بعد.\nاضغط على (+ غرفة) في الأعلى لإضافة غرفتك الأولى.");
                       emptyText.setTextColor(Color.parseColor("#4A5568"));
-                      emptyText.setTextSize(15sp);
+                      emptyText.setTextSize(15f);
                       emptyText.setGravity(View.TEXT_ALIGNMENT_CENTER);
                       emptyText.setPadding(24, 60, 24, 24);
                       roomsListContainer.addView(emptyText);
@@ -680,14 +680,14 @@ jobs:
                       String initials = room.length() >= 2 ? room.substring(0, 2).toUpperCase() : room.toUpperCase();
                       badge.setText(initials);
                       badge.setTextColor(Color.WHITE);
-                      badge.setTextSize(16sp);
+                      badge.setTextSize(16f);
                       badge.setBackgroundColor(Color.parseColor("#3182CE"));
                       badge.setPadding(28, 22, 28, 22);
 
                       TextView roomTitle = new TextView(this);
                       roomTitle.setText("  " + room);
                       roomTitle.setTextColor(Color.parseColor("#1A202C"));
-                      roomTitle.setTextSize(17sp);
+                      roomTitle.setTextSize(17f);
                       roomTitle.setPadding(24, 16, 12, 16);
 
                       row.addView(badge);
