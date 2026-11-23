@@ -757,7 +757,7 @@ jobs:
                   tvHeaderTitle.setText(roomCode);
 
                   String url = "https://meet.jit.si/FriendsVoice_" + roomCode
-                          + "#config.startWithAudioMuted=false&config.startWithVideoMuted=true&config.prejoinPageEnabled=false&interfaceConfig.DISABLE_JOIN_LEAVE_NOTIFICATIONS=true";
+                          + "#config.startWithAudioMuted=false&config.startWithVideoMuted=true&config.prejoinPageEnabled=false&config.disableDeepLinking=true&interfaceConfig.DISABLE_JOIN_LEAVE_NOTIFICATIONS=true";
                   webViewVoice.loadUrl(url);
               }
 
