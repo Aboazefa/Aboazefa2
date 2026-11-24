@@ -821,29 +821,29 @@ jobs:
                   if (webViewVoice != null) {
                       webViewVoice.destroy();
                   }
-                  super.onDestroy();
-             }
-         }
-    }
-
-    private void checkEmailLogin() {
-        android.content.SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        currentUserEmail = prefs.getString(KEY_EMAIL, "");
-        if (currentUserEmail == null || currentUserEmail.trim().isEmpty()) {
+                      super.onDestroy();
+                 }
+            }
+          }
+   
+             private void checkEmailLogin() {
+             android.content.SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+             currentUserEmail = prefs.getString(KEY_EMAIL, "");
+             if (currentUserEmail == null || currentUserEmail.trim().isEmpty()) {
             askEmailDialog();
-        }
-    }
+              }
+            }
 
-    private void askEmailDialog() {
-        android.app.AlertDialog.Builder b = new android.app.AlertDialog.Builder(this);
-        b.setTitle("تسجيل الدخول بالإيميل");
-        b.setMessage("اكتب بريدك الإلكتروني:");
-        final android.widget.EditText input = new android.widget.EditText(this);
-        input.setHint("name@email.com");
-        input.setInputType(android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
-        b.setView(input);
-        b.setCancelable(false);
-        b.setPositiveButton("حفظ", (d, w) -> {
+            private void askEmailDialog() {
+            android.app.AlertDialog.Builder b = new android.app.AlertDialog.Builder(this);
+            b.setTitle("تسجيل الدخول بالإيميل");
+            b.setMessage("اكتب بريدك الإلكتروني:");
+            final android.widget.EditText input = new android.widget.EditText(this);
+            input.setHint("name@email.com");
+            input.setInputType(android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+            b.setView(input);
+            b.setCancelable(false);
+            b.setPositiveButton("حفظ", (d, w) -> {
             String email = input.getText().toString().trim();
             if (!email.contains("@") || !email.contains(".")) {
                 android.widget.Toast.makeText(this, "إيميل غير صحيح", android.widget.Toast.LENGTH_SHORT).show();
