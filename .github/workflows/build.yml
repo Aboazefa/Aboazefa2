@@ -478,7 +478,8 @@ jobs:
               private boolean isInCall = false;
               private boolean isChatVisible = true;
               private String currentRoomCode = "";
-
+              private static final String KEY_EMAIL = "user_email";
+              private String currentUserEmail = "";
               @Override
               protected void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
@@ -510,6 +511,14 @@ jobs:
                   loadSavedRooms();
                   renderRoomsCards();
                   showRoomsTab();
+                  if (chatScrollView != null) {
+                  android.view.ViewGroup.LayoutParams p = chatScrollView.getLayoutParams();
+                  if (p != null) {
+                  p.height = 190;
+                  chatScrollView.setLayoutParams(p);
+                  }
+                  }
+                  checkEmailLogin();
 
                   btnTopAdd.setOnClickListener(v -> showAddRoomDialog());
                   btnNavAdd.setOnClickListener(v -> showAddRoomDialog());
@@ -677,6 +686,11 @@ jobs:
                   Toast.makeText(this, "أدخل اسم غرفة صحيحاً", Toast.LENGTH_SHORT).show();
                   return;
                   }
+                  if (!roomsList.contains(cleanCode)) {
+                  Toast.makeText(this, "هذه الغرفة غير موجودة", Toast.LENGTH_SHORT).show();
+                  return;
+                  }
+
                   tryJoinGroup(cleanCode);
                   });
 
@@ -790,7 +804,7 @@ jobs:
                   tvHeaderTitle.setText(roomCode);
 
                   String url = "https://meet.jit.si/FriendsVoice_" + roomCode
-                          + "#config.startWithAudioMuted=false&config.startWithVideoMuted=true&config.prejoinPageEnabled=false&config.disableDeepLinking=true&interfaceConfig.DISABLE_JOIN_LEAVE_NOTIFICATIONS=true";
+                          + "#config.startWithAudioMuted=true&config.startWithVideoMuted=true&config.prejoinPageEnabled=false&config.disableDeepLinking=true&interfaceConfig.DISABLE_JOIN_LEAVE_NOTIFICATIONS=true";
                   webViewVoice.loadUrl(url);
               }
 
@@ -808,8 +822,42 @@ jobs:
                       webViewVoice.destroy();
                   }
                   super.onDestroy();
-              }
-          }
+             }
+         }
+    }
+
+    private void checkEmailLogin() {
+        android.content.SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        currentUserEmail = prefs.getString(KEY_EMAIL, "");
+        if (currentUserEmail == null || currentUserEmail.trim().isEmpty()) {
+            askEmailDialog();
+        }
+    }
+
+    private void askEmailDialog() {
+        android.app.AlertDialog.Builder b = new android.app.AlertDialog.Builder(this);
+        b.setTitle("تسجيل الدخول بالإيميل");
+        b.setMessage("اكتب بريدك الإلكتروني:");
+        final android.widget.EditText input = new android.widget.EditText(this);
+        input.setHint("name@email.com");
+        input.setInputType(android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+        b.setView(input);
+        b.setCancelable(false);
+        b.setPositiveButton("حفظ", (d, w) -> {
+            String email = input.getText().toString().trim();
+            if (!email.contains("@") || !email.contains(".")) {
+                android.widget.Toast.makeText(this, "إيميل غير صحيح", android.widget.Toast.LENGTH_SHORT).show();
+                askEmailDialog();
+                return;
+            }
+            currentUserEmail = email;
+            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putString(KEY_EMAIL, email).apply();
+        });
+        b.show();
+    }
+}
+
+
           EOF
 
       - name: Build Debug APK
