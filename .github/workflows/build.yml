@@ -20,7 +20,7 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
           
-      - name: Install Android SDK Packages
+            - name: Install Android SDK Packages
         run: |
           export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/cmdline-tools/11.0/bin:$ANDROID_HOME/platform-tools:$PATH"
           if [ ! -d "$ANDROID_HOME/cmdline-tools/latest" ] && [ -d "$ANDROID_HOME/cmdline-tools/11.0" ]; then
@@ -28,10 +28,11 @@ jobs:
           fi
           yes | sdkmanager --sdk_root="$ANDROID_HOME" --licenses > /dev/null || true
           sdkmanager --sdk_root="$ANDROID_HOME" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
-          
+
       - name: Create Voice And Text Chat Android Project
         run: |
           mkdir -p gradle/wrapper
+          
           cat << 'EOF' > gradle/wrapper/gradle-wrapper.properties
           distributionBase=GRADLE_USER_HOME
           distributionPath=wrapper/dists
