@@ -21,7 +21,7 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Install Android SDK Packages
+            - name: Install Android SDK Packages
         run: |
           export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/cmdline-tools/11.0/bin:$ANDROID_HOME/platform-tools:$PATH"
           if [ ! -d "$ANDROID_HOME/cmdline-tools/latest" ] && [ -d "$ANDROID_HOME/cmdline-tools/11.0" ]; then
