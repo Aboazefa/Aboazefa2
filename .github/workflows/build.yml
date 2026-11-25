@@ -853,7 +853,7 @@ jobs:
                       btnShareItem.setText("مشاركة");
                       btnShareItem.setTextColor(Color.WHITE);
                       btnShareItem.setBackgroundColor(Color.parseColor("#2B6CB0"));
-                      btnShareItem.setTextSize(12sp);
+                      btnShareItem.setTextSize(12f);
                       btnShareItem.setOnClickListener(v -> shareRoomInvite(room));
 
                       row.addView(badge);
