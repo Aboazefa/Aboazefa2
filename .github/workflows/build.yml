@@ -14,13 +14,14 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+
       - name: Set up JDK 17
         uses: actions/setup-java@v5
         with:
           java-version: '17'
           distribution: 'temurin'
-          
-            - name: Install Android SDK Packages
+
+      - name: Install Android SDK Packages
         run: |
           export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/cmdline-tools/11.0/bin:$ANDROID_HOME/platform-tools:$PATH"
           if [ ! -d "$ANDROID_HOME/cmdline-tools/latest" ] && [ -d "$ANDROID_HOME/cmdline-tools/11.0" ]; then
@@ -32,7 +33,7 @@ jobs:
       - name: Create Voice And Text Chat Android Project
         run: |
           mkdir -p gradle/wrapper
-          
+
           cat << 'EOF' > gradle/wrapper/gradle-wrapper.properties
           distributionBase=GRADLE_USER_HOME
           distributionPath=wrapper/dists
@@ -91,8 +92,8 @@ jobs:
                   applicationId "com.example.friendsvoice"
                   minSdk 24
                   targetSdk 34
-                  versionCode 6
-                  versionName "6.0"
+                  versionCode 7
+                  versionName "7.0"
               }
 
               buildTypes {
@@ -193,8 +194,8 @@ jobs:
                   android:background="#3182CE"
                   android:gravity="center_vertical"
                   android:orientation="horizontal"
-                  android:paddingStart="16dp"
-                  android:paddingEnd="16dp"
+                  android:paddingStart="12dp"
+                  android:paddingEnd="12dp"
                   android:visibility="gone">
 
                   <TextView
@@ -204,18 +205,28 @@ jobs:
                       android:layout_weight="1"
                       android:text="غرفة صوتية نشطة"
                       android:textColor="#FFFFFF"
-                      android:textSize="14sp"
+                      android:textSize="13sp"
                       android:textStyle="bold" />
+
+                  <Button
+                      android:id="@+id/btnShareActiveRoom"
+                      android:layout_width="wrap_content"
+                      android:layout_height="32dp"
+                      android:layout_marginEnd="4dp"
+                      android:backgroundTint="#2B6CB0"
+                      android:text="مشاركة"
+                      android:textColor="#FFFFFF"
+                      android:textSize="11sp" />
 
                   <Button
                       android:id="@+id/btnToggleChat"
                       android:layout_width="wrap_content"
                       android:layout_height="32dp"
-                      android:layout_marginEnd="6dp"
+                      android:layout_marginEnd="4dp"
                       android:backgroundTint="#2C5282"
                       android:text="الكتابة"
                       android:textColor="#FFFFFF"
-                      android:textSize="12sp" />
+                      android:textSize="11sp" />
 
                   <Button
                       android:id="@+id/btnBannerLeave"
@@ -224,7 +235,7 @@ jobs:
                       android:backgroundTint="#E53E3E"
                       android:text="خروج"
                       android:textColor="#FFFFFF"
-                      android:textSize="12sp" />
+                      android:textSize="11sp" />
               </LinearLayout>
 
               <!-- Main Content Container -->
@@ -245,7 +256,7 @@ jobs:
                           android:layout_width="match_parent"
                           android:layout_height="wrap_content"
                           android:layout_marginBottom="10dp"
-                          android:text="اضغط على أي غرفة للانضمام صوتياً وكتابياً — اضغط مطولاً لحذفها"
+                          android:text="اضغط على أي غرفة للانضمام — اضغط مطولاً لحذفها أو مشاركتها"
                           android:textColor="#4A5568"
                           android:textSize="13sp" />
 
@@ -281,11 +292,33 @@ jobs:
                           android:textStyle="bold" />
 
                       <TextView
+                          android:id="@+id/tvCurrentEmailInfo"
                           android:layout_width="match_parent"
                           android:layout_height="wrap_content"
-                          android:layout_marginTop="12dp"
+                          android:layout_marginTop="10dp"
+                          android:background="#EDF2F7"
+                          android:padding="12dp"
+                          android:text="البريد الحالي: غير مسجل"
+                          android:textColor="#2B6CB0"
+                          android:textSize="14sp"
+                          android:textStyle="bold" />
+
+                      <Button
+                          android:id="@+id/btnChangeEmail"
+                          android:layout_width="wrap_content"
+                          android:layout_height="40dp"
+                          android:layout_marginTop="8dp"
+                          android:backgroundTint="#2B6CB0"
+                          android:text="تغيير البريد الإلكتروني"
+                          android:textColor="#FFFFFF"
+                          android:textSize="13sp" />
+
+                      <TextView
+                          android:layout_width="match_parent"
+                          android:layout_height="wrap_content"
+                          android:layout_marginTop="14dp"
                           android:lineSpacingExtra="6dp"
-                          android:text="1. اضغط على زر (+ غرفة) لإضافة اسم الغرفة التي تريدها.\n2. أرسل نفس اسم الغرفة لصديقك ليدخل معك في نفس الغرفة.\n3. داخل الغرفة يمكنك التحدث صوتياً والكتابة في مربع الرسائل بالأسفل.\n4. اضغط مطولاً على أي غرفة في القائمة لحذفها."
+                          android:text="1. اضغط على زر (+ غرفة) لإضافة اسم الغرفة التي تريدها.\n2. شارك اسم الغرفة أو رابطها مع صديقك ليدخل معك في نفس الغرفة.\n3. داخل الغرفة يمكنك التحدث صوتياً والكتابة في مربع الرسائل بالأسفل.\n4. اضغط مطولاً على أي غرفة في القائمة لمشاركتها أو نسخها أو حذفها."
                           android:textColor="#2D3748"
                           android:textSize="15sp" />
                   </LinearLayout>
@@ -426,7 +459,10 @@ jobs:
 
           import android.Manifest;
           import android.app.AlertDialog;
+          import android.content.ClipData;
+          import android.content.ClipboardManager;
           import android.content.Context;
+          import android.content.Intent;
           import android.content.SharedPreferences;
           import android.content.pm.PackageManager;
           import android.graphics.Color;
@@ -458,6 +494,7 @@ jobs:
 
               private static final String PREFS_NAME = "FriendsVoicePrefs";
               private static final String KEY_ROOMS = "saved_rooms";
+              private static final String KEY_EMAIL = "user_email";
 
               private LinearLayout roomsTabLayout;
               private LinearLayout infoTabLayout;
@@ -469,6 +506,7 @@ jobs:
               private TextView tvHeaderTitle;
               private TextView tvBannerRoom;
               private TextView tvChatMessages;
+              private TextView tvCurrentEmailInfo;
               private EditText etChatInput;
               private Button btnNavRooms;
               private Button btnNavInfo;
@@ -478,8 +516,8 @@ jobs:
               private boolean isInCall = false;
               private boolean isChatVisible = true;
               private String currentRoomCode = "";
-              private static final String KEY_EMAIL = "user_email";
               private String currentUserEmail = "";
+
               @Override
               protected void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
@@ -495,6 +533,7 @@ jobs:
                   tvHeaderTitle = findViewById(R.id.tvHeaderTitle);
                   tvBannerRoom = findViewById(R.id.tvBannerRoom);
                   tvChatMessages = findViewById(R.id.tvChatMessages);
+                  tvCurrentEmailInfo = findViewById(R.id.tvCurrentEmailInfo);
                   etChatInput = findViewById(R.id.etChatInput);
                   btnNavRooms = findViewById(R.id.btnNavRooms);
                   btnNavInfo = findViewById(R.id.btnNavInfo);
@@ -502,9 +541,11 @@ jobs:
 
                   Button btnTopAdd = findViewById(R.id.btnTopAdd);
                   Button btnNavAdd = findViewById(R.id.btnNavAdd);
+                  Button btnShareActiveRoom = findViewById(R.id.btnShareActiveRoom);
                   Button btnBannerLeave = findViewById(R.id.btnBannerLeave);
                   Button btnToggleChat = findViewById(R.id.btnToggleChat);
                   Button btnSendChat = findViewById(R.id.btnSendChat);
+                  Button btnChangeEmail = findViewById(R.id.btnChangeEmail);
 
                   requestMicPermission();
                   setupWebView();
@@ -512,16 +553,22 @@ jobs:
                   renderRoomsCards();
                   showRoomsTab();
                   if (chatScrollView != null) {
-                  android.view.ViewGroup.LayoutParams p = chatScrollView.getLayoutParams();
-                  if (p != null) {
-                  p.height = 190;
-                  chatScrollView.setLayoutParams(p);
-                  }
+                      android.view.ViewGroup.LayoutParams p = chatScrollView.getLayoutParams();
+                      if (p != null) {
+                          p.height = 190;
+                          chatScrollView.setLayoutParams(p);
+                      }
                   }
                   checkEmailLogin();
+                  updateEmailInfoLabel();
 
                   btnTopAdd.setOnClickListener(v -> showAddRoomDialog());
                   btnNavAdd.setOnClickListener(v -> showAddRoomDialog());
+                  btnShareActiveRoom.setOnClickListener(v -> {
+                      if (!currentRoomCode.isEmpty()) {
+                          shareRoomInvite(currentRoomCode);
+                      }
+                  });
                   btnNavRooms.setOnClickListener(v -> {
                       if (!isInCall) {
                           showRoomsTab();
@@ -532,7 +579,8 @@ jobs:
                           showInfoTab();
                       }
                   });
-                  btnBannerLeave.setOnClickListener(v -> leaveLiveRoom());
+                  btnBannerLeave.setOnClickListener(v -> confirmLeaveRoom());
+                  btnChangeEmail.setOnClickListener(v -> askEmailDialog());
 
                   btnToggleChat.setOnClickListener(v -> {
                       isChatVisible = !isChatVisible;
@@ -543,12 +591,52 @@ jobs:
                   btnSendChat.setOnClickListener(v -> sendChatMessage());
               }
 
+              private void updateEmailInfoLabel() {
+                   if (tvCurrentEmailInfo != null) {
+                      String displayEmail = (currentUserEmail == null || currentUserEmail.trim().isEmpty())
+                              ? "غير مسجل"
+                              : currentUserEmail;
+                      tvCurrentEmailInfo.setText("البريد الحالي: " + displayEmail);
+                  }
+              }
+
+              private void shareRoomInvite(String roomCode) {
+                  String roomUrl = buildJitsiUrl(roomCode);
+                  String shareText = "انضم معي إلى غرفة Friends Voice\nاسم الغرفة: " + roomCode + "\nالرابط: " + roomUrl;
+                  Intent shareIntent = new Intent(Intent.ACTION_SEND);
+                  shareIntent.setType("text/plain");
+                  shareIntent.putExtra(Intent.EXTRA_SUBJECT, "دعوة غرفة Friends Voice");
+                  shareIntent.putExtra(Intent.EXTRA_TEXT, shareText);
+                  startActivity(Intent.createChooser(shareIntent, "مشاركة الغرفة عبر"));
+              }
+
+              private void copyRoomCode(String roomCode) {
+                  ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                  if (clipboard != null) {
+                      ClipData clip = ClipData.newPlainText("RoomCode", roomCode);
+                      clipboard.setPrimaryClip(clip);
+                      Toast.makeText(this, "تم نسخ اسم الغرفة: " + roomCode, Toast.LENGTH_SHORT).show();
+                  }
+              }
+
+              private void confirmLeaveRoom() {
+                  new AlertDialog.Builder(this)
+                          .setTitle("تأكيد الخروج")
+                          .setMessage("هل تريد مغادرة الغرفة الحالية؟")
+                          .setPositiveButton("خروج", (dialog, which) -> leaveLiveRoom())
+                          .setNegativeButton("بقاء", null)
+                          .show();
+              }
+
               private void sendChatMessage() {
                   String msg = etChatInput.getText().toString().trim();
                   if (msg.isEmpty()) {
                       return;
                   }
-                  appendChatLine("أنا: " + msg);
+                  String senderPrefix = (currentUserEmail != null && !currentUserEmail.trim().isEmpty())
+                          ? currentUserEmail
+                          : "أنا";
+                  appendChatLine(senderPrefix + ": " + msg);
                   etChatInput.setText("");
 
                   if (webViewVoice != null && !currentRoomCode.isEmpty()) {
@@ -567,6 +655,7 @@ jobs:
                               + "  }"
                               + "}"
                               + "})();";
+
                       webViewVoice.evaluateJavascript(js, null);
                   }
               }
@@ -594,6 +683,7 @@ jobs:
                   roomLiveLayout.setVisibility(View.GONE);
                   roomsTabLayout.setVisibility(View.GONE);
                   infoTabLayout.setVisibility(View.VISIBLE);
+                  updateEmailInfoLabel();
                   tvHeaderTitle.setText("الإرشادات");
                   btnNavInfo.setTextColor(Color.parseColor("#2B6CB0"));
                   btnNavRooms.setTextColor(Color.parseColor("#2D3748"));
@@ -628,6 +718,22 @@ jobs:
 
                   builder.setNegativeButton("إلغاء", null);
                   builder.show();
+              }
+
+              private void showRoomOptionsDialog(String roomCode) {
+                  String[] options = {"مشاركة الغرفة مع صديق", "نسخ اسم الغرفة", "حذف الغرفة"};
+                  new AlertDialog.Builder(this)
+                          .setTitle("خيارات الغرفة: " + roomCode)
+                          .setItems(options, (dialog, which) -> {
+                              if (which == 0) {
+                                  shareRoomInvite(roomCode);
+                              } else if (which == 1) {
+                                  copyRoomCode(roomCode);
+                              } else if (which == 2) {
+                                  showDeleteRoomDialog(roomCode);
+                              }
+                          })
+                          .show();
               }
 
               private void showDeleteRoomDialog(String roomCode) {
@@ -680,18 +786,18 @@ jobs:
                   btnQuickJoin.setBackgroundColor(Color.parseColor("#1976D2"));
 
                   btnQuickJoin.setOnClickListener(v -> {
-                  String raw = etQuickJoin.getText() != null ? etQuickJoin.getText().toString().trim() : "";
-                  String cleanCode = raw.replaceAll("[^a-zA-Z0-9_-]", "");
-                  if (cleanCode.isEmpty()) {
-                  Toast.makeText(this, "أدخل اسم غرفة صحيحاً", Toast.LENGTH_SHORT).show();
-                  return;
-                  }
-                  if (!roomsList.contains(cleanCode)) {
-                  Toast.makeText(this, "هذه الغرفة غير موجودة", Toast.LENGTH_SHORT).show();
-                  return;
-                  }
+                      String raw = etQuickJoin.getText() != null ? etQuickJoin.getText().toString().trim() : "";
+                      String cleanCode = raw.replaceAll("[^a-zA-Z0-9_-]", "");
+                      if (cleanCode.isEmpty()) {
+                          Toast.makeText(this, "أدخل اسم غرفة صحيحاً", Toast.LENGTH_SHORT).show();
+                          return;
+                      }
+                      if (!roomsList.contains(cleanCode)) {
+                          Toast.makeText(this, "هذه الغرفة غير موجودة", Toast.LENGTH_SHORT).show();
+                          return;
+                      }
 
-                  tryJoinGroup(cleanCode);
+                      tryJoinGroup(cleanCode);
                   });
 
                   quickJoinBar.addView(etQuickJoin);
@@ -712,9 +818,9 @@ jobs:
                   for (String room : roomsList) {
                       LinearLayout row = new LinearLayout(this);
                       row.setOrientation(LinearLayout.HORIZONTAL);
-                      row.setGravity(View.TEXT_ALIGNMENT_GRAVITY);
+                      row.setGravity(android.view.Gravity.CENTER_VERTICAL);
                       row.setBackgroundColor(Color.WHITE);
-                      row.setPadding(28, 24, 28, 24);
+                      row.setPadding(24, 20, 24, 20);
 
                       LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
                               LinearLayout.LayoutParams.MATCH_PARENT,
@@ -729,20 +835,34 @@ jobs:
                       badge.setTextColor(Color.WHITE);
                       badge.setTextSize(16f);
                       badge.setBackgroundColor(Color.parseColor("#3182CE"));
-                      badge.setPadding(28, 22, 28, 22);
+                      badge.setPadding(24, 18, 24, 18);
 
                       TextView roomTitle = new TextView(this);
                       roomTitle.setText("  " + room);
                       roomTitle.setTextColor(Color.parseColor("#1A202C"));
                       roomTitle.setTextSize(17f);
-                      roomTitle.setPadding(24, 16, 12, 16);
+                      roomTitle.setPadding(20, 12, 12, 12);
+                      LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(
+                              0,
+                              LinearLayout.LayoutParams.WRAP_CONTENT,
+                              1f
+                      );
+                      roomTitle.setLayoutParams(titleParams);
+
+                      Button btnShareItem = new Button(this);
+                      btnShareItem.setText("مشاركة");
+                      btnShareItem.setTextColor(Color.WHITE);
+                      btnShareItem.setBackgroundColor(Color.parseColor("#2B6CB0"));
+                      btnShareItem.setTextSize(12sp);
+                      btnShareItem.setOnClickListener(v -> shareRoomInvite(room));
 
                       row.addView(badge);
                       row.addView(roomTitle);
+                      row.addView(btnShareItem);
 
                       row.setOnClickListener(v -> tryJoinGroup(room));
                       row.setOnLongClickListener(v -> {
-                          showDeleteRoomDialog(room);
+                          showRoomOptionsDialog(room);
                           return true;
                       });
 
@@ -784,6 +904,11 @@ jobs:
                   });
               }
 
+              private String buildJitsiUrl(String roomCode) {
+                  return "https://meet.jit.si/FriendsVoice_" + roomCode
+                          + "#config.startWithAudioMuted=true&config.startWithVideoMuted=true&config.prejoinPageEnabled=false&config.disableDeepLinking=true&interfaceConfig.DISABLE_JOIN_LEAVE_NOTIFICATIONS=true";
+              }
+
               private void joinLiveRoom(String roomCode) {
                   AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
                   if (audioManager != null) {
@@ -800,12 +925,10 @@ jobs:
                   infoTabLayout.setVisibility(View.GONE);
                   roomLiveLayout.setVisibility(View.VISIBLE);
                   activeCallBanner.setVisibility(View.VISIBLE);
-                  tvBannerRoom.setText("صوت وكتابة في الغرفة: " + roomCode);
+                  tvBannerRoom.setText("غرفة: " + roomCode);
                   tvHeaderTitle.setText(roomCode);
 
-                  String url = "https://meet.jit.si/FriendsVoice_" + roomCode
-                          + "#config.startWithAudioMuted=true&config.startWithVideoMuted=true&config.prejoinPageEnabled=false&config.disableDeepLinking=true&interfaceConfig.DISABLE_JOIN_LEAVE_NOTIFICATIONS=true";
-                  webViewVoice.loadUrl(url);
+                  webViewVoice.loadUrl(buildJitsiUrl(roomCode));
               }
 
               private void leaveLiveRoom() {
@@ -816,56 +939,55 @@ jobs:
                   showRoomsTab();
               }
 
+              private void checkEmailLogin() {
+                  SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+                  currentUserEmail = prefs.getString(KEY_EMAIL, "");
+                  if (currentUserEmail == null || currentUserEmail.trim().isEmpty()) {
+                      askEmailDialog();
+                  }
+              }
+
+              private void askEmailDialog() {
+                  AlertDialog.Builder b = new AlertDialog.Builder(this);
+                  b.setTitle("تسجيل الدخول بالإيميل");
+                  b.setMessage("اكتب بريدك الإلكتروني:");
+                  final EditText input = new EditText(this);
+                  input.setHint("name@email.com");
+                  if (currentUserEmail != null && !currentUserEmail.trim().isEmpty()) {
+                      input.setText(currentUserEmail);
+                  }
+                  input.setInputType(android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+                  b.setView(input);
+                  b.setCancelable(false);
+                  b.setPositiveButton("حفظ", (d, w) -> {
+                      String email = input.getText().toString().trim();
+                      if (!email.contains("@") || !email.contains(".")) {
+                          Toast.makeText(this, "إيميل غير صحيح", Toast.LENGTH_SHORT).show();
+                          askEmailDialog();
+                          return;
+                      }
+                      currentUserEmail = email;
+                      getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putString(KEY_EMAIL, email).apply();
+                      updateEmailInfoLabel();
+                  });
+                  b.show();
+              }
+
               @Override
               protected void onDestroy() {
                   if (webViewVoice != null) {
                       webViewVoice.destroy();
                   }
-                      super.onDestroy();
-                 }
-            }
-          }
-   
-             private void checkEmailLogin() {
-             android.content.SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-             currentUserEmail = prefs.getString(KEY_EMAIL, "");
-             if (currentUserEmail == null || currentUserEmail.trim().isEmpty()) {
-            askEmailDialog();
+                  super.onDestroy();
               }
-            }
-
-            private void askEmailDialog() {
-            android.app.AlertDialog.Builder b = new android.app.AlertDialog.Builder(this);
-            b.setTitle("تسجيل الدخول بالإيميل");
-            b.setMessage("اكتب بريدك الإلكتروني:");
-            final android.widget.EditText input = new android.widget.EditText(this);
-            input.setHint("name@email.com");
-            input.setInputType(android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
-            b.setView(input);
-            b.setCancelable(false);
-            b.setPositiveButton("حفظ", (d, w) -> {
-            String email = input.getText().toString().trim();
-            if (!email.contains("@") || !email.contains(".")) {
-                android.widget.Toast.makeText(this, "إيميل غير صحيح", android.widget.Toast.LENGTH_SHORT).show();
-                askEmailDialog();
-                return;
-            }
-            currentUserEmail = email;
-            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putString(KEY_EMAIL, email).apply();
-        });
-        b.show();
-    }
-    }
-
-
+          }
           EOF
 
       - name: Build Debug APK
         run: ./gradlew assembleDebug --stacktrace
 
-      - name: Upload APK
-        if: success()
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: friends-voice-apk
-          path: app/build/outputs/apk/debug/*.apk
+          name: FriendsVoice-Debug-APK
+          path: app/build/outputs/apk/debug/app-debug.apk
